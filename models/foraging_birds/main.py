@@ -22,6 +22,8 @@ from agent_torch.helpers import read_config, read_from_file, grid_network
 from substeps import *
 from helpers import *
 
+from plot import Plot
+
 print(':: execution started')
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config', help='path to yaml config file')
@@ -42,7 +44,10 @@ runner.init()
 
 print(':: preparing simulation...')
 
+visual = Plot(metadata.get('max_x'), metadata.get('max_y'))
+
 for episode in trange(num_episodes, desc=':: running simulation'):
   runner.step(num_steps_per_episode)
+  visual.capture(runner.state)
 
 print(':: execution completed')

@@ -8,7 +8,7 @@ import osmnx as ox
 
 def map_network(params):
   coordinates = (40.78264403323726, -73.96559413265355) # central park
-  distance = 550
+  distance = 1200 #550
 
   graph = ox.graph_from_point(coordinates, dist=distance, simplify=True, network_type="walk")
   adjacency_matrix = nx.adjacency_matrix(graph).todense()

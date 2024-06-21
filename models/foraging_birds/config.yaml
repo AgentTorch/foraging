@@ -1,21 +1,21 @@
 simulation_metadata:
-  num_episodes: 1
-  num_steps_per_episode: 4
+  num_episodes: 5
+  num_steps_per_episode: 20
   num_substeps_per_step: 1
   calibration: false
   device: 'cpu'
 
-  max_x: 80
-  max_y: 80
+  max_x: 30
+  max_y: 30
   max_speed: 0.5
   min_speed: -0.5
+  max_force: 3.0
+  
   num_birds: 100
   neighbor_radius: 3.0
   separation_distance: 1.0
 
-  max_force: 3.0
-
-  locations_file: 'data/80x100/birds-coords.csv'
+  locations_file: 'data/30x100/birds-coords.csv'
 
   cohesion_weight: 0.2
   alignment_weight: 0.2

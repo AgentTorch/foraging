@@ -1,0 +1,168 @@
+simulation_metadata:
+  num_episodes: 1
+  num_steps_per_episode: 4
+  num_substeps_per_step: 1
+  calibration: false
+  device: 'cpu'
+
+  max_x: 80
+  max_y: 80
+  max_speed: 0.5
+  min_speed: -0.5
+  num_birds: 100
+  neighbor_radius: 3.0
+  separation_distance: 1.0
+
+  max_force: 3.0
+
+  locations_file: 'data/80x100/birds-coords.csv'
+
+  cohesion_weight: 0.2
+  alignment_weight: 0.2
+  separation_weight: 0.2
+
+state:
+  environment:
+    bounds:
+      name: "Grid Bounds"
+      learnable: false
+      shape: 2
+      dtype: 'int'
+      initialization_function: null
+      value:
+        - ${simulation_metadata.max_x}
+        - ${simulation_metadata.max_y}
+    
+    radius:
+      name: "Radius"
+      learnable: false
+      shape: 
+        - 1
+      dtype: 'int'
+      initialization_function: null
+      value: ${simulation_metadata.neighbor_radius}
+
+    separation_distance:
+      name: "Separation Distance for Boids"
+      learnable: false
+      shape: 
+        - 1
+      dtype: 'int'
+      initialization_function: null
+      value: ${simulation_metadata.separation_distance}
+  
+  agents:
+    bird:
+      number: ${simulation_metadata.num_birds}
+      properties:
+        location:
+          name: "Spatial position of agent"
+          learnable: false
+          shape:
+            - ${state.agents.bird.number}
+            - 2
+          dtype: 'float'
+          initialization_function:
+            generator: 'read_from_file'
+            arguments:
+              file_path:
+                name: "Initial locations file"
+                learnable: false
+                shape: null
+                value: ${simulation_metadata.locations_file}
+                initialization_function: null
+      
+        velocity:
+          name: "Velocity of the agent"
+          learnable: false
+          shape:
+            - ${state.agents.bird.number}
+            - 2
+          dtype: 'float'
+          initialization_function:
+            generator: 'random_float'
+            arguments:
+              lower_limit:
+                name: 'Lower Bound'
+                learnable: false
+                shape:
+                  - 1
+                value: ${simulation_metadata.min_speed}
+                initialization_function: null
+              upper_limit:
+                name: 'Upper Bound'
+                learnable: false
+                shape:
+                  - 1
+                value: ${simulation_metadata.max_speed}
+                initialization_function: null
+          value: 0
+
+  network:
+    agent_agent:
+      follower_birds:
+        type: 'map'
+        arguments: null
+  
+  objects: null
+
+substeps:
+  '0':
+    name: "Move"
+    description: 'Birds move based on boids steering algorithm'
+    active_agents:
+      - 'bird'
+    observation:
+      bird:
+        observe_neighbors:
+          generator: 'ObserveNeighbors'
+          arguments: null
+          input_variables:
+            location: 'agents/bird/location'
+            neighbor_radius: 'environment/radius'
+          output_variables:
+            - neighbor_mask
+  
+    policy:
+      bird:
+        decide_steering:
+          generator: "DecideSteering"
+          arguments:
+            cohesion_weight:
+              name: 'Cohesion Weight'
+              learnable: false
+              shape:
+                - 1
+              value: ${simulation_metadata.cohesion_weight}
+              initialization_function: null
+            alignment_weight:
+              name: 'Alignment Weight'
+              learnable: false
+              shape:
+                - 1
+              value: ${simulation_metadata.alignment_weight}
+              initialization_function: null
+            separation_weight:
+              name: 'Separation Weight'
+              learnable: false
+              shape:
+                - 1
+              value: ${simulation_metadata.separation_weight}
+              initialization_function: null
+          input_variables:
+            location: 'agents/bird/location'
+            velocity: 'agents/bird/velocity'
+            separation_distance: 'environment/separation_distance'
+          output_variables:
+            - steering
+    
+    transition:
+      update_location_velocity:
+        generator: "UpdateLocationVelocity"
+        arguments: null
+        input_variables:
+          location: 'agents/bird/location'
+          velocity: 'agents/bird/velocity'
+        output_variables:
+          - location
+          - velocity

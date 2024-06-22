@@ -5,8 +5,8 @@ from itertools import product
 from random import sample
 import os
 
-grid_size = 30
-num_coords = 100
+grid_size = 10
+num_coords = 40
 
 coords = sample(list(product(range(grid_size), repeat=2)), k=num_coords)
 

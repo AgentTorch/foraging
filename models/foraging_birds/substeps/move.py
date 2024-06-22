@@ -38,8 +38,8 @@ class ObserveNeighbors(SubstepObservation):
 
         return {self.output_variables[0]: neighbor_mask}
 
-@Registry.register_substep("decide_steering", "policy")
-class DecideSteering(SubstepAction):
+@Registry.register_substep("social_steering", "policy")
+class SocialSteering(SubstepAction):
     '''compute steering based on cohesion, alignment and seperation weights'''
     def __init__(self, config, input_variables, output_variables, arguments):
         super().__init__(config, input_variables, output_variables, arguments)
@@ -93,6 +93,58 @@ class DecideSteering(SubstepAction):
 
         return {self.output_variables[0]: steering}
 
+@Registry.register_substep("memory_steering", "policy")
+class MemorySteering(SubstepAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    def compute_memory_steering(bird_positions, values, n, m, radius):
+        """
+        Compute memory-based steering for all birds.
+        
+        Args:
+        bird_positions: Tensor of shape (num_birds, 2) representing (x, y) positions
+        values: Tensor of shape (NM, 1) representing value of each state
+        n, m: Grid dimensions
+        radius: Neighborhood radius for considering next states
+        
+        Returns:
+        memory_steering: Tensor of shape (num_birds, 2) representing steering vectors
+        """
+        num_birds = bird_positions.shape[0]
+        device = bird_positions.device
+        
+        # Generate all possible offsets within the radius
+        y, x = torch.meshgrid(torch.arange(-radius, radius+1, device=device),
+                            torch.arange(-radius, radius+1, device=device))
+        offsets = torch.stack((x.flatten(), y.flatten()), dim=1)
+        valid_offsets = torch.sum(offsets**2, dim=1) <= radius**2
+        offsets = offsets[valid_offsets]
+        
+        # Compute neighbor positions for all birds
+        neighbors = bird_positions.unsqueeze(1) + offsets.unsqueeze(0)
+        
+        # Clip neighbors to valid grid positions
+        neighbors = torch.clamp(neighbors, min=0, max=torch.tensor([n-1, m-1], device=device))
+        
+        # Compute state indices for birds and their neighbors
+        bird_indices = bird_positions[:, 0] * m + bird_positions[:, 1]
+        neighbor_indices = neighbors[:, :, 0] * m + neighbors[:, :, 1]
+        
+        # Get values for neighbors
+        neighbor_values = values[neighbor_indices]
+        
+        # Compute softmax probabilities
+        probs = F.softmax(neighbor_values, dim=1)
+        
+        # Compute steering vectors
+        steering_vectors = neighbors - bird_positions.unsqueeze(1)
+        memory_steering = torch.sum(probs * steering_vectors, dim=1)
+        
+        return memory_steering
+
+    def forward(self, state, observation):
+        pass
 
 @Registry.register_substep("update_location_velocity", "transition")
 class UpdateLocationVelocity(SubstepTransition):

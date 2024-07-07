@@ -3,7 +3,7 @@
 
 import math
 import torch
-from agent_torch.registry import Registry
+from agent_torch.core.registry import Registry
 
 @Registry.register_helper('random_float', 'initialization')
 def random_float(shape, params):

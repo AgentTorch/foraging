@@ -1,6 +1,6 @@
 simulation_metadata:
-  num_episodes: 30
-  num_steps_per_episode: 20
+  num_episodes: 2
+  num_steps_per_episode: 5
   num_substeps_per_step: 1
   calibration: false
   device: 'cpu'
@@ -12,14 +12,17 @@ simulation_metadata:
   max_force: 3.0
   
   num_birds: 40
+  num_rewards: 5
+
   neighbor_radius: 4.0
   separation_distance: 1.0
 
   locations_file: 'data/10x40/birds-coords.csv'
+  reward_vector_file: 'data/10x40/reward-coords.csv'
 
-  cohesion_weight: 0.2
-  alignment_weight: 0.2
-  separation_weight: 0.2
+  cohesion_weight: 1.0
+  alignment_weight: 0.1
+  cognitive_weight: 0.7
 
 state:
   environment:
@@ -50,6 +53,30 @@ state:
       dtype: 'int'
       initialization_function: null
       value: ${simulation_metadata.separation_distance}
+    
+    state_value:
+      name: "Value of State based on Successor Representation"
+      learnable: false
+      shape:
+        - ${simulation_metadata.max_x}
+        - ${simulation_metadata.max_y}
+      dtype: 'float'
+      initialization_function:
+        generator: 'compute_sr_values'
+        arguments:
+          gamma:
+            name: "Memory decay parameter"
+            learnable: false
+            shape:
+              - 1
+            value: 0.9
+            initialization_function: null
+          reward_vector:
+            name: "Reward Distribution in the Environment"
+            learnable: false
+            shape: null
+            initialization_function: null
+            value: ${simulation_metadata.reward_vector_file}
   
   agents:
     bird:
@@ -96,7 +123,6 @@ state:
                   - 1
                 value: ${simulation_metadata.max_speed}
                 initialization_function: null
-          value: 0
 
   network:
     agent_agent:
@@ -104,7 +130,36 @@ state:
         type: 'map'
         arguments: null
   
-  objects: null
+  objects:
+    food:
+      number: ${simulation_metadata.num_rewards}
+      properties:
+        location:
+          name: "Reward for State Location"
+          learnable: false
+          shape:
+            - ${simulation_metadata.num_rewards}
+            - 2
+          dtype: 'float'
+          initialization_function:
+            generator: 'read_from_file'
+            arguments:
+              file_path:
+                name: "Reward locations file"
+                learnable: false
+                shape: null
+                value: ${simulation_metadata.reward_vector_file}
+                initialization_function: null
+        
+        nutritional_value:
+          name: "Amount of food remaining at location"
+          learnable: false
+          shape:
+            - ${simulation_metadata.max_x}
+            - ${simulation_metadata.max_y}
+          dtype: 'float'
+          value: 1.0
+          initialization_function: null
 
 substeps:
   '0':
@@ -142,27 +197,68 @@ substeps:
                 - 1
               value: ${simulation_metadata.alignment_weight}
               initialization_function: null
-            separation_weight:
-              name: 'Separation Weight'
-              learnable: false
-              shape:
-                - 1
-              value: ${simulation_metadata.separation_weight}
-              initialization_function: null
           input_variables:
             location: 'agents/bird/location'
             velocity: 'agents/bird/velocity'
             separation_distance: 'environment/separation_distance'
           output_variables:
-            - steering
+            - social_steering
+        
+        memory_steering:
+          generator: "MemorySteering"
+          arguments: null
+          input_variables:
+            location: 'agents/bird/location'
+            velocity: 'agents/bird/velocity'
+            state_value: 'environment/state_value'
+          output_variables:
+            - memory_steering
     
     transition:
       update_location_velocity:
         generator: "UpdateLocationVelocity"
-        arguments: null
+        arguments:
+          cognitive_weight:
+            name: "Cognitive abilities of the agent"
+            learnable: false
+            shape:
+              - 1
+            value: ${simulation_metadata.cognitive_weight}
+            initialization_function: null
         input_variables:
           location: 'agents/bird/location'
           velocity: 'agents/bird/velocity'
         output_variables:
           - location
           - velocity
+  
+  # '1':
+  #   name: "Eat"
+  #   description: "Birds stop to eat food based on MVT"
+  #   active_agents:
+  #     - 'bird'
+  #   observation: null
+  #   policy:
+  #     bird:
+  #       decide_eat_or_move:
+  #         generator: "DecideEatOrMove"
+  #         arguments: null
+  #         input_variables:
+  #           location: 'agents/bird/location'
+  #           food_coordinates: 'objects/food/location'
+  #           nutritional_value: 'objects/food/nutritional_value'
+  #         output_variables:
+  #           - eating_decision
+        
+  #   transition:
+  #     update_food_and_location:
+  #       generator: "UpdateFoodAndLocation"
+  #       arguments: null
+  #       input_variables:
+  #           location: 'agents/bird/location'
+  #           food_coordinates: 'objects/food/location'
+  #           nutritional_value: 'objects/food/nutritional_value'
+  #           bounds: 'environment/bounds'
+  #       output_variables:
+  #         - location
+  #         - nutritional_value

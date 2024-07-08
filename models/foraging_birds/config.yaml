@@ -1,7 +1,7 @@
 simulation_metadata:
   num_episodes: 2
-  num_steps_per_episode: 5
-  num_substeps_per_step: 1
+  num_steps_per_episode: 20
+  num_substeps_per_step: 2
   calibration: false
   device: 'cpu'
 
@@ -23,6 +23,10 @@ simulation_metadata:
   cohesion_weight: 1.0
   alignment_weight: 0.1
   cognitive_weight: 0.7
+
+  depletion_rate: 0.3
+  average_patch_quality: 0.05
+  average_travel_time: 20
 
 state:
   environment:
@@ -99,6 +103,26 @@ state:
                 value: ${simulation_metadata.locations_file}
                 initialization_function: null
       
+        is_foraging:
+          name: "Foraging status of the agent"
+          learnable: false
+          shape:
+            - ${state.agents.bird.number}
+            - 1
+          dtype: 'float'
+          initialization_function: null
+          value: 0.0
+        
+        time_in_patch:
+          name: "Time spent in patch by bird"
+          learnable: false
+          shape:
+            - ${state.agents.bird.number}
+            - 1
+          dtype: 'float'
+          initialization_function: null
+          value: 0.0
+
         velocity:
           name: "Velocity of the agent"
           learnable: false
@@ -232,33 +256,37 @@ substeps:
           - location
           - velocity
   
-  # '1':
-  #   name: "Eat"
-  #   description: "Birds stop to eat food based on MVT"
-  #   active_agents:
-  #     - 'bird'
-  #   observation: null
-  #   policy:
-  #     bird:
-  #       decide_eat_or_move:
-  #         generator: "DecideEatOrMove"
-  #         arguments: null
-  #         input_variables:
-  #           location: 'agents/bird/location'
-  #           food_coordinates: 'objects/food/location'
-  #           nutritional_value: 'objects/food/nutritional_value'
-  #         output_variables:
-  #           - eating_decision
+  '1':
+    name: "Eat"
+    description: "Birds stop to eat food based on MVT"
+    active_agents:
+      - 'bird'
+    observation:
+      bird: null
+    policy:
+      bird:
+        decide_eat_or_move:
+          generator: "DecideEatOrMove"
+          arguments: null
+          input_variables:
+            location: 'agents/bird/location'
+            food_coordinates: 'objects/food/location'
+            nutritional_value: 'objects/food/nutritional_value'
+            is_foraging: 'agents/bird/is_foraging'
+            time_in_patch: 'agents/bird/time_in_patch'
+          output_variables:
+            - eating_decision
         
-  #   transition:
-  #     update_food_and_location:
-  #       generator: "UpdateFoodAndLocation"
-  #       arguments: null
-  #       input_variables:
-  #           location: 'agents/bird/location'
-  #           food_coordinates: 'objects/food/location'
-  #           nutritional_value: 'objects/food/nutritional_value'
-  #           bounds: 'environment/bounds'
-  #       output_variables:
-  #         - location
-  #         - nutritional_value
+    transition:
+      update_food_and_action:
+        generator: "UpdateFoodAndAction"
+        arguments: null
+        input_variables:
+            time_in_patch: 'agents/bird/time_in_patch'
+            is_foraging: 'agents/bird/is_foraging'
+            nutritional_value: 'objects/food/nutritional_value'
+            location: 'agents/bird/location'
+        output_variables:
+          - nutritional_value
+          - time_in_patch
+          - is_foraging

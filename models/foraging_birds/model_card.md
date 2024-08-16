@@ -96,7 +96,7 @@
 - Results should be interpreted cautiously when applied to wildlife management or conservation policies
 
 ## References
-- AgentTorch GitHub repository: [github.com/AgentTorch/foraging](https://github.com/AgentTorch/foraging/new/master/models/foraging_birds)
+- AgentTorch GitHub repository: [github.com/AgentTorch/foraging](https://github.com/AgentTorch/foraging/tree/master/models/foraging_birds)
 - Reynolds, C. W. (1987). Flocks, herds and schools: A distributed behavioral model. SIGGRAPH Comput. Graph., 21(4), 25–34.
 - Charnov, E. L. (1976). Optimal foraging, the marginal value theorem. Theoretical Population Biology, 9(2), 129-136.
 - Dayan, P. (1993). Improving generalization for temporal difference learning: The successor representation. Neural Computation, 5(4), 613-624.
